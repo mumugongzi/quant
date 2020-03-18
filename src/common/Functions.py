@@ -124,6 +124,25 @@ def get_stock_code_list_in_one_dir(path):
     return stock_list
 
 
+# 导入某文件夹下所有股票的代码
+def get_stock_code_list():
+    """
+    从指定文件夹下，导入所有csv文件的文件名
+    :param path:
+    :return:
+    """
+    stock_list = []
+
+    # 系统自带函数os.walk，用于遍历文件夹中的所有文件
+    for root, dirs, files in os.walk(config.stock_data_path):
+        if files:  # 当files不为空的时候
+            for f in files:
+                if f.endswith('.csv'):
+                    stock_list.append(f.split('.csv')[0])
+
+    return stock_list
+
+
 # 将股票数据和指数数据合并
 def merge_with_index_data(df, index_data):
     """
