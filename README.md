@@ -13,6 +13,10 @@ sh build/init_env.sh
 # Python版本
 * Python 3.6.6
 
+# 文档
+* [mplfinance](https://github.com/matplotlib/mplfinance/blob/master/README.md)
+* [pandas](https://pandas.pydata.org/pandas-docs/stable/reference/io.html)
+
 # 小贴士
 * 预测者网提供的万科互数据(sz000002)在1993-10-17之前的周六有交易数据, 原因目前不详
 

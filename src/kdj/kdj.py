@@ -26,7 +26,8 @@ code_list = Functions.get_stock_code_list_in_one_dir(config.stock_data_path)
 output = pd.DataFrame()
 for code in code_list:
     # 导入数据
-    data = Functions.import_stock_data(code)
+    columns_list = ['交易日期', '股票代码', '开盘价', '最高价', '最低价', '收盘价', '涨跌幅', '成交额', '成交额']
+    data = Functions.import_stock_data(code, columns=columns_list)
 
     # 计算后复权价
     data[['开盘价', '最高价', '最低价', '收盘价']] = Functions.cal_fuquan_price(data)

@@ -44,7 +44,8 @@ for code in stock_code_list:
         continue
 
     # 从csv文件中读取该股票数据
-    stock_data = import_stock_data(code, other_columns=['总市值', '市盈率TTM'])
+    colums_list = ['交易日期', '股票代码', '开盘价', '最高价', '最低价', '收盘价', '涨跌幅', '成交额', '成交额', '总市值', '市盈率TTM']
+    stock_data = import_stock_data(code, columns=colums_list)
 
     # 删除PE_TTM值为空的数据行
     stock_data = stock_data[stock_data['市盈率TTM'].notnull()]

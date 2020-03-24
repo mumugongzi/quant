@@ -27,6 +27,10 @@ import warnings
 from common import config
 from common import indicator
 
+import matplotlib.pyplot as plt
+
+plt.rcParams['font.family'] = ['SimHei']
+
 warnings.filterwarnings("ignore")
 
 
@@ -138,7 +142,6 @@ def annual_return(date_line, capital_line):
     # 将数据序列合并成dataframe并按日期排序
     df = pd.DataFrame({'date': date_line, 'capital': capital_line})
     df = df[df['capital'].notnull()]
-    print(df)
 
     # 计算年化收益率
     annual = (df['capital'].iloc[-1] / df['capital'].iloc[0]) ** (250 / len(df)) - 1
@@ -174,11 +177,14 @@ for root, dirs, files in os.walk(config.stock_data_path):
             if '.csv' in f:
                 stock_code_list.append(f.split('.csv')[0])
 
-stock_code_list = stock_code_list[3900:]
+# stock_code_list = stock_code_list[3900:]
 progress = 0
 
-re = pd.DataFrame(columns=['code', 'start', 'param', 'stock_rtn', 'stock_md', 'stock_md_start', 'stock_md_end', 'strategy_rtn',
-                               'strategy_md', 'strategy_md_start', 'strategy_md_end', 'excessive_rtn'])
+re = pd.DataFrame(
+    columns=['code', 'start', 'param', 'stock_rtn', 'stock_md', 'stock_md_start', 'stock_md_end', 'strategy_rtn',
+             'strategy_md', 'strategy_md_start', 'strategy_md_end', 'excessive_rtn'])
+
+param_list = range(10, 31, 2)
 i = 0
 for code in stock_code_list:
     progress = progress + 1
@@ -190,7 +196,7 @@ for code in stock_code_list:
     if len(stock_data) < 360:
         continue
 
-    for p in range(10, 31, 2):
+    for p in param_list:
         df = bands(stock_data, n=p)
         # 计算策略每天涨幅
         df = account(df, slippage=0, commision_rate=0)
@@ -204,10 +210,11 @@ for code in stock_code_list:
         stock_line = list(df['close'])
         # 股票的年化收益
         stock_rtn = annual_return(date_line, stock_line)
+
         # 策略的年化收益
         strategy_rtn = annual_return(date_line, capital_line)
         # 股票最大回撤
-        stock_md, stock_md_start,  stock_md_end= indicator.max_drawdown(date_line, stock_line)
+        stock_md, stock_md_start, stock_md_end = indicator.max_drawdown(date_line, stock_line)
         # 策略最大回撤
         strategy_md, strategy_md_start, strategy_md_end = indicator.max_drawdown(date_line, capital_line)
 
@@ -228,4 +235,34 @@ for code in stock_code_list:
 
     # re.sort_values(by='excessive_rtn', ascending=False, inplace=True)
 
+statis_df = pd.DataFrame(columns=['param', 'stock_rtn', 'strategy_rtn', 'excessive_rtn', 'excessive_ratio'])
+for p in param_list:
+    re_p = re[re['param'] == p]
+
+    idx = len(statis_df)
+    statis_df.loc[idx, 'param'] = p
+    statis_df.loc[idx, 'stock_rtn'] = re_p['stock_rtn'].mean()
+    statis_df.loc[idx, 'strategy_rtn'] = re_p['strategy_rtn'].mean()
+    statis_df.loc[idx, 'excessive_rtn'] = re_p['excessive_rtn'].mean()
+    statis_df.loc[idx, 'excessive_ratio'] = len(re_p[re_p['excessive_rtn'] > 0]) * 1.0 / len(re_p)
+
+
+
 re.to_csv(config.output_data_path + "bbands.csv", mode='w', index=False)
+
+plt.subplot(2, 1, 1)
+plt.plot(statis_df['param'], statis_df['stock_rtn'], label='股票平均收益')
+plt.plot(statis_df['param'], statis_df['strategy_rtn'], label='策略收益')
+plt.plot(statis_df['param'], statis_df['excessive_rtn'], label='超额收益')
+plt.xlabel('布林通道参数')
+plt.ylabel('收益')
+plt.title('策略收益对比')
+plt.legend()
+
+plt.subplot(2, 1, 2)
+plt.plot(statis_df['param'], statis_df['excessive_ratio'])
+plt.xlabel('布林通道参数')
+plt.ylabel('比例')
+plt.title('超额收益大于0股票占比')
+
+plt.show()

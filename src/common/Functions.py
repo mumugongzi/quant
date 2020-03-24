@@ -18,50 +18,64 @@ from common import config
 """
 
 
-def get_train_data_column(column_list):
-    train_column_list = []
-    for c in column_list:
-        if c in config.name_map.keys():
-            train_column_list.append(config.name_map[c])
-        else:
-            raise Exception("找不到列名: {}".format(c))
-
-    return train_column_list
-
-
-def get_rename_map(column_list):
+def stock_rename_map():
     rename_map = {}
-    for c in column_list:
-        if c in config.name_map.keys():
-            rename_map[config.name_map[c]] = c
-        else:
-            raise Exception("找不到列名: {}".format(c))
+    for k in config.name_map.keys():
+        rename_map[config.name_map[k]] = k
+        print("'{}': '{}',".format(config.name_map[k], k))
+
+    exit(0)
     return rename_map
 
 
-def import_stock_data(stock_code, other_columns=[]):
+def import_stock_data(stock_code, columns=None):
     """
     导入在data/input_data/stock_data下的股票数据。
     :param stock_code: 股票数据的代码，例如'sh600000'
-    :param other_columns: 若为默认值，只导入以下基础字段：'交易日期', '股票代码', '开盘价', '最高价', '最低价', '收盘价', '涨跌幅', '成交额'。
+    :param param columns: 获取数据列, list结构, 如果为空获取全部列
     若不为默认值，会导入除基础字段之外其他指定的字段
     :return:
     """
     df = pd.read_csv(config.stock_data_path + stock_code + '.csv', encoding='gbk')
 
-    columns_list = ['交易日期', '股票代码', '开盘价', '最高价', '最低价', '收盘价', '涨跌幅', '成交额'] + other_columns
+    # columns_list = ['交易日期', '股票代码', '开盘价', '最高价', '最低价', '收盘价', '涨跌幅', '成交额', '成交额'] + other_columns
 
     # df.columns = [i.encode('utf8') for i in df.columns]
-    df = df[get_train_data_column(columns_list)]
+    df = df.rename(columns=config.rename_map)
 
-    df = df.rename(columns=get_rename_map(columns_list))
+    if columns and len(columns) >= 0:
+        df = df[columns]
 
     df.sort_values(by=['交易日期'], inplace=True)
     df['交易日期'] = pd.to_datetime(df['交易日期'])
 
     # df.reset_index(inplace=True, drop=True)
     df.reset_index(inplace=True, drop=True)
-    df = df.dropna(subset=['涨跌幅'])
+    return df
+
+def import_index_data(index_code, columns=None):
+    """
+    导入在data/input_data/stock_data下的股票数据。
+    :param index_code: 指数代码，例如'sh000001'
+    :param columns: 获取数据列, list结构, 如果为空获取全部列
+    若不为默认值，会导入除基础字段之外其他指定的字段
+    :return:
+    """
+    df = pd.read_csv(config.index_data_path + index_code + '.csv', encoding='gbk')
+
+    # columns_list = ['交易日期', '股票代码', '开盘价', '最高价', '最低价', '收盘价', '涨跌幅', '成交额', '成交额'] + other_columns
+
+    # df.columns = [i.encode('utf8') for i in df.columns]
+    df = df.rename(columns=config.rename_map)
+
+    if columns and len(columns) >= 0:
+        df = df[columns]
+
+    df.sort_values(by=['交易日期'], inplace=True)
+    df['交易日期'] = pd.to_datetime(df['交易日期'])
+
+    # df.reset_index(inplace=True, drop=True)
+    df.reset_index(inplace=True, drop=True)
     return df
 
 

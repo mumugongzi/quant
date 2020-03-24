@@ -202,13 +202,14 @@ def beta(date_line, return_line, indexreturn_line):
 
 
 # 计算alpha的函数
-def alpha(date_line, capital_line, index_line, return_line, indexreturn_line):
+def alpha(date_line, capital_line, index_line, return_line, indexreturn_line, rf = 0.0284):
     """
     :param date_line: 日期序列
     :param capital_line: 账户价值序列
     :param index_line: 指数序列
     :param return_line: 账户日收益率序列
     :param indexreturn_line: 指数的收益率序列
+    :param rf: 无风险利率取10年期国债的到期年化收益率
     :return: 输出alpha值
     """
     # 将数据序列合并成dataframe并按日期排序
@@ -216,12 +217,9 @@ def alpha(date_line, capital_line, index_line, return_line, indexreturn_line):
                        'benchmark_rtn': indexreturn_line})
     df.sort_values(by='date', inplace=True)
     df.reset_index(drop=True, inplace=True)
-    # rng = pd.period_range(df['date'].iloc[0], df['date'].iloc[-1], freq='D')
-    rng = df.index
-    rf = 0.0284  # 无风险利率取10年期国债的到期年化收益率
 
-    annual_stock = pow(df.loc[len(df.index) - 1, 'capital'] / df.loc[0, 'capital'], 250 / len(rng)) - 1  # 账户年化收益
-    annual_index = pow(df.loc[len(df.index) - 1, 'benchmark'] / df.loc[0, 'benchmark'], 250 / len(rng)) - 1  # 基准年化收益
+    annual_stock = pow(df.loc[len(df.index) - 1, 'capital'] / df.loc[0, 'capital'], 250 / len(df.index)) - 1  # 账户年化收益
+    annual_index = pow(df.loc[len(df.index) - 1, 'benchmark'] / df.loc[0, 'benchmark'], 250 / len(df.index)) - 1  # 基准年化收益
 
     beta = df['rtn'].cov(df['benchmark_rtn']) / df['benchmark_rtn'].var()  # 计算贝塔值
     a = (annual_stock - rf) - beta * (annual_index - rf)  # 计算alpha值
