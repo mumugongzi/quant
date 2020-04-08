@@ -23,6 +23,14 @@ stock_data_path = os.path.abspath(os.path.join(root_path, 'data', 'stock_data'))
 # 输出数据根目录地址
 output_data_path = os.path.abspath(os.path.join(root_path, 'output')) + "/"
 
+# 如果目录不存在, 创建目录
+os.makedirs(output_data_path, exist_ok=True)
+
+# 回测报告输出目录
+# back_report_path = os.path.abspath(os.path.join(root_path, os.pardir, 'back_report')) + "/"
+back_report_path = os.path.abspath(os.path.join(root_path, 'back_report')) + "/"
+os.makedirs(back_report_path, exist_ok=True)
+
 # # 当前路径
 # print os.path.abspath('.')
 # # 父辈路径
@@ -48,4 +56,8 @@ rename_map = {
     'PS_TTM': '市销率TTM',
     'PC_TTM': '市现率TTM',
     'PB': '市净率',
+}
+
+index_name_map = {
+    'sh0000001': '上证指数',
 }

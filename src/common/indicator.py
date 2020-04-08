@@ -9,8 +9,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from common import config
 
-
 # 获取数据函数
+from tool.plot import *
+
+
 def get_stock_data(stock_code, index_code, start_date, end_date):
     """
     :param stock_code: 股票代码，例如‘sz000002’
@@ -37,11 +39,17 @@ def get_stock_data(stock_code, index_code, start_date, end_date):
     benchmark.set_index('date', inplace=True)
 
     # 将回测要用到的各个数据序列转成list格式
-    date_line = list(benchmark.index.strftime('%Y-%m-%d'))  # 日期序列
+    # date_line = list(benchmark.index.strftime('%Y-%m-%d'))  # 日期序列
     capital_line = list(stock_data['adjust_price'])  # 账户价值序列
     return_line = list(stock_data['change'])  # 收益率序列
     indexreturn_line = list(benchmark['change'])  # 指数的变化率序列
     index_line = list(benchmark['close'])  # 指数序列
+
+    date_line = list(benchmark.index)  # 日期序列
+    # capital_line = stock_data['adjust_price']  # 账户价值序列
+    # return_line = stock_data['change']  # 收益率序列
+    # indexreturn_line = benchmark['change']  # 指数的变化率序列
+    # index_line = benchmark['close']  # 指数序列
 
     return date_line, capital_line, return_line, index_line, indexreturn_line
 
@@ -202,7 +210,7 @@ def beta(date_line, return_line, indexreturn_line):
 
 
 # 计算alpha的函数
-def alpha(date_line, capital_line, index_line, return_line, indexreturn_line, rf = 0.0284):
+def alpha(date_line, capital_line, index_line, return_line, indexreturn_line, rf=0.0284):
     """
     :param date_line: 日期序列
     :param capital_line: 账户价值序列
@@ -219,7 +227,8 @@ def alpha(date_line, capital_line, index_line, return_line, indexreturn_line, rf
     df.reset_index(drop=True, inplace=True)
 
     annual_stock = pow(df.loc[len(df.index) - 1, 'capital'] / df.loc[0, 'capital'], 250 / len(df.index)) - 1  # 账户年化收益
-    annual_index = pow(df.loc[len(df.index) - 1, 'benchmark'] / df.loc[0, 'benchmark'], 250 / len(df.index)) - 1  # 基准年化收益
+    annual_index = pow(df.loc[len(df.index) - 1, 'benchmark'] / df.loc[0, 'benchmark'],
+                       250 / len(df.index)) - 1  # 基准年化收益
 
     beta = df['rtn'].cov(df['benchmark_rtn']) / df['benchmark_rtn'].var()  # 计算贝塔值
     a = (annual_stock - rf) - beta * (annual_index - rf)  # 计算alpha值
@@ -284,12 +293,44 @@ def cumulative_return(date_line, return_line, indexreturn_line):
     plt.show()
 
 
+def period_win_rate(date_line, change_line, period='M'):
+    """
+    :param date_line: 日期序列
+    :param change_line: 账户每日收益序列, 每日涨跌幅
+    :param period: 指定计算胜率的周期, A: 计算年度胜率, M: 计算月度胜率, W: 计算周度胜率
+    :return:
+    """
+
+    df = pd.DataFrame({'交易日期': date_line, '涨跌幅': change_line})
+    df.set_index('交易日期', inplace=True)
+
+    period_rtn = period_return(date_line, change_line, period)
+    return len(period_rtn[period_rtn['涨跌幅'] > 0]) * 1.0 / len(period_rtn)
+
+
+def period_return(date_line, change_line, period='M'):
+    """
+    :param date_line: 日期序列
+    :param change_line: 账户每日收益序列, 每日涨跌幅
+    :param period: 指定计算胜率的周期, A: 计算年度胜率, M: 计算月度胜率, W: 计算周度胜率
+    :return: 返回指定周期内的回报率
+    """
+
+    df = pd.DataFrame({'交易日期': date_line, '涨跌幅': change_line})
+    df.set_index('交易日期', inplace=True)
+
+    print(df["2015-12-31":"2016-12-31"])
+
+    # pandas的采样不是按周、月、年等间隔采样, 而是按照自然周、年、月的起始时间分割数据
+    return df.resample(period).apply(lambda x: (x + 1.0).prod() - 1.0)
+
+
 # 测试指标计算函数
 if __name__ == '__main__':
     # 调用get_stock_data函数读取数据
     date_line, capital_line, return_line, index_line, indexreturn_line = get_stock_data('sz000002', 'sh000001',
-                                                                                        '1994-1-30',
-                                                                                        '2015-12-31')
+                                                                                        '2006-01-01',
+                                                                                        '2019-12-31')
 
     # 年化收益率
     print("年化收益: %.2f" % annual_return(date_line, capital_line))
@@ -315,3 +356,25 @@ if __name__ == '__main__':
     print("信息比率: %.2f" % info_ratio(date_line, return_line, indexreturn_line))
     # 画出累积收益率曲线图
     cumulative_return(date_line, return_line, indexreturn_line)
+
+    # benchmark = pd.read_csv(config.index_data_path + 'sh000001' + '.csv', parse_dates=['date'])
+    #
+    # benchmark = benchmark[benchmark['date'] >= '2015-01-01']
+    # benchmark.set_index('date', inplace=True)
+    #
+    # year_win_rate = period_win_rate(list(benchmark.index), benchmark['change'], period='A')
+    # year_rtn = period_return(list(benchmark.index), benchmark['change'], period='A')
+    #
+    # print(year_win_rate)
+    # print(year_rtn)
+    #
+    # plot_year_return(year_rtn, show=True)
+    #
+    # print(list(year_rtn.index.year))
+    # print(list(year_rtn['涨跌幅']))
+
+    # plot_back_line(pd.DataFrame({
+    #     "交易日期": date_line,
+    #     "策略收益": [elem / capital_line[0] - 1 for elem in capital_line],
+    #     "基准收益": [elem / index_line[0] - 1 for elem in index_line],
+    # }), show=True)

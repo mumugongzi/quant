@@ -32,15 +32,11 @@ def import_stock_data(stock_code, columns=None):
     """
     导入在data/input_data/stock_data下的股票数据。
     :param stock_code: 股票数据的代码，例如'sh600000'
-    :param param columns: 获取数据列, list结构, 如果为空获取全部列
-    若不为默认值，会导入除基础字段之外其他指定的字段
-    :return:
+    :param columns: 获取数据列, list结构, 如果为空获取全部列
+    :return 单个股票数据
     """
     df = pd.read_csv(config.stock_data_path + stock_code + '.csv', encoding='gbk')
 
-    # columns_list = ['交易日期', '股票代码', '开盘价', '最高价', '最低价', '收盘价', '涨跌幅', '成交额', '成交额'] + other_columns
-
-    # df.columns = [i.encode('utf8') for i in df.columns]
     df = df.rename(columns=config.rename_map)
 
     if columns and len(columns) >= 0:
@@ -52,6 +48,19 @@ def import_stock_data(stock_code, columns=None):
     # df.reset_index(inplace=True, drop=True)
     df.reset_index(inplace=True, drop=True)
     return df
+
+
+def import_stock_data_by_list(stock_list, start_date, end_date, columns=None, print_progress=False):
+    """
+    :param stock_list: 股票代码列表
+    :param start_date: 获取start_date之后的数据, 包括start_date当天数据
+    :param end_date: 获取end_date之前的数据, 包括end_date当天数据
+    :param columns: 获取数据列, list结构, 如果为空获取全部列
+    :param print_progress: 打印数据导入进度
+    :return 返回包含所有股票数据的DataFrame
+    """
+    pass
+
 
 def import_index_data(index_code, columns=None):
     """
@@ -92,30 +101,40 @@ def import_sh000001_data():
     return df_index
 
 
+def get_trade_date_list(start_date, end_date):
+    df_index = pd.read_csv(config.index_data_path + 'sh000001.csv', parse_dates=['date'])
+
+    df_index = df_index[(df_index['date'] >= start_date) & (df_index['date'] <= end_date)]
+    df_index.sort_values(by='date', inplace=True)
+    return list(df_index['date'])
+
+
 # 计算复权价
-def cal_fuquan_price(input_stock_data, fuquan_type='后复权'):
+def cal_right_price(input_stock_data, right_type='后复权', price_columns=None):
     """
     计算复权价
     :param input_stock_data:
-    :param fuquan_type:复权类型，可以是'后复权'或者'前复权'
+    :param right_type:复权类型，可以是'后复权'或者'前复权'
     :return:
     """
     # 创建空的df
-    df = pd.DataFrame()
+    right_price_df = pd.DataFrame()
 
     # 计算复权收盘价
     num = {'后复权': 0, '前复权': -1}
-    price1 = input_stock_data['收盘价'].iloc[num[fuquan_type]]
-    df['复权因子'] = (1.0 + input_stock_data['涨跌幅']).cumprod()
-    price2 = df['复权因子'].iloc[num[fuquan_type]]
-    df['收盘价_' + fuquan_type] = df['复权因子'] * (price1 / price2)
+    price1 = input_stock_data['收盘价'].iloc[num[right_type]]
+    right_price_df['复权因子'] = (1.0 + input_stock_data['涨跌幅']).cumprod()
+    price2 = right_price_df['复权因子'].iloc[num[right_type]]
+    right_price_df['收盘价'] = right_price_df['复权因子'] * (price1 / price2)
 
-    # 计算复权的开盘价、最高价、最低价
-    df['开盘价_' + fuquan_type] = input_stock_data['开盘价'] / input_stock_data['收盘价'] * df['收盘价_' + fuquan_type]
-    df['最高价_' + fuquan_type] = input_stock_data['最高价'] / input_stock_data['收盘价'] * df['收盘价_' + fuquan_type]
-    df['最低价_' + fuquan_type] = input_stock_data['最低价'] / input_stock_data['收盘价'] * df['收盘价_' + fuquan_type]
+    if not price_columns or len(price_columns) <= 0:
+        price_columns = ['开盘价', '最高价', '最低价', '收盘价']
 
-    return df[[i + '_' + fuquan_type for i in ('开盘价', '最高价', '最低价', '收盘价')]]
+    for c in price_columns:
+        if c == '收盘价':
+            continue
+        right_price_df[c] = input_stock_data[c] / input_stock_data['收盘价'] * right_price_df['收盘价']
+    return right_price_df[price_columns]
 
 
 # 导入某文件夹下所有股票的代码
